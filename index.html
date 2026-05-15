@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+ <title>生鲜每日进货台账</title>
+ <style>
+ * { box-sizing: border-box; margin: 0; padding: 0; }
+ body {
+  font-family: -apple-system, BlinkMacSystemFont, "微软雅黑", sans-serif;
+  max-width: 450px;
+  margin: 0 auto;
+  background: #f5f5f5;
+  padding: 10px 10px 80px;
+  font-size: 15px;
+ }
+ .title {
+  text-align: center;
+  font-size: 22px;
+  color: #ff6b35;
+  font-weight: bold;
+  margin: 8px 0 12px;
+ }
+ .card {
+  background: white;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+ }
+ h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  border-left: 4px solid #ff6b35;
+  padding-left: 8px;
+ }
+ label { font-size: 13px; color: #666; display: block; margin-top: 6px; }
+ input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 4px 0 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 15px;
+  background: #fafafa;
+ }
+ input:focus, select:focus { outline: none; border-color: #ff6b35; background: #fff; }
+ .row { display: flex; gap: 8px; }
+ .row > * { flex: 1; }
+ .btn {
+  background: #ff6b35;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  margin: 4px 0;
+ }
+ .btn:active { opacity: 0.8; }
+ .btn-green { background: #28a745; }
+ .btn-danger { background: #dc3545; }
+ .btn-sm { padding: 6px 10px; font-size: 13px; width: auto; display: inline-block; }
+ .item {
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+  line-height: 1.7;
+  font-size: 14px;
+ }
+ .item:last-child { border-bottom: none; }
+ .item .meta { font-size: 12px; color: #999; }
+ .unpay { color: #dc3545; font-weight: bold; cursor: pointer; }
+ .pay { color: #28a745; font-weight: bold; cursor: pointer; }
+ .total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: #ff6b35;
+ }
+ .debt-card { background: #fff5f5; border: 1px solid #ffcccc; }
+ .debt-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #ffe0e0;
+  font-size: 14px;
+ }
+ .debt-item:last-child { border-bottom: none; }
+ .debt-item .name { font-weight: 600; }
+ .debt-item .amount { color: #dc3545; font-weight: bold; }
+ .badge {
+  display: inline-block;
+  background: #dc3545;
+  color: white;
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 12px;
+  margin-left: 6px;
+ }
+ .tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 450px;
+  margin: 0 auto;
+  background: white;
+  display: flex;
+  border-top: 1px solid #ddd;
+  box-shadow: 0 -2px 6px rgba(0,0,0,0.05);
+ }
+ .tab-bar .tab {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  font-size: 13px;
+  color: #999;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+ }
+ .tab-bar .tab.active { color: #ff6b35; border-bottom-color: #ff6b35; font-weight: 600; }
+ .page { display: none; }
+ .page.active { display: block; }
+ .empty { text-align: center; color: #bbb; padding: 20px 0; font-size: 14px; }
+ .summary-card { background: #fff8f0; border-radius: 8px; padding: 10px; margin: 8px 0; }
+ .summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+ .big-number { font-size: 28px; font-weight: bold; color: #ff6b35; }
+ .right { text-align: right; }
+ .mt-8 { margin-top: 8px; }
+ </style>
+</head>
+<body>
+
+<!-- 标题 -->
+<div class="title">🥬 生鲜进货台账</div>
+
+<!-- ====== 底部导航 ====== -->
+<div class="tab-bar">
+ <div class="tab active" onclick="switchTab('record')">📝 记账</div>
+ <div class="tab" onclick="switchTab('today')">📋 今日</div>
+ <div class="tab" onclick="switchTab('debt')">💰 欠款</div>
+ <div class="tab" onclick="switchTab('history')">📜 全部</div>
+</div>
+
+<!-- ====== 页面1：记账 ====== -->
+<div id="page-record" class="page active">
+ <div class="card">
+  <h3>➕ 管理商家</h3>
+  <div class="row">
+   <input type="text" id="shopName" placeholder="输入商家名称" style="flex:3">
+   <button class="btn btn-sm" onclick="addShop()" style="flex:1; margin-left:4px">保存</button>
+  </div>
+  <select id="shopSelect" onchange="updateQuickShop()">
+   <option value="">— 选择已有商家 —</option>
+  </select>
+ </div>
+
+ <div class="card">
+  <h3>📝 记一笔</h3>
+  <label>菜品名称</label>
+  <input type="text" id="food" placeholder="如：白菜、土豆、青椒">
+
+  <div class="row">
+   <div style="flex:1">
+    <label>斤数</label>
+    <input type="number" id="weight" placeholder="30" step="0.5" oninput="autoCalc()">
+   </div>
+   <div style="flex:1">
+    <label>进价（元/斤）</label>
+    <input type="number" id="price" placeholder="2.5" step="0.1" oninput="autoCalc()">
+   </div>
+  </div>
+
+  <label>总金额 <span style="color:#999;font-weight:normal">（自动计算）</span></label>
+  <input type="text" id="money" placeholder="自动计算" readonly style="background:#f0f0f0;font-weight:bold;color:#ff6b35">
+
+  <div class="row" style="margin-top:4px">
+   <select id="status" style="flex:1">
+    <option value="未付">❌ 未付</option>
+    <option value="已付">✅ 已付</option>
+   </select>
+   <button class="btn" onclick="addRecord()" style="flex:2">保存记录</button>
+  </div>
+ </div>
+
+ <div class="card">
+  <div class="total-row">
+   <span>今日已记 <span id="todayCount">0</span> 笔</span>
+   <span>今日合计：<span id="todayTotal">0</span> 元</span>
+  </div>
+ </div>
+</div>
+
+<!-- ====== 页面2：今日 ====== -->
+<div id="page-today" class="page">
+ <div class="card">
+  <h3>📋 今日进货清单</h3>
+  <div id="todayList"></div>
+  <div class="total-row" style="border-top:1px solid #eee;margin-top:4px">
+   <span>当日合计</span>
+   <span id="todayTotal2">0 元</span>
+  </div>
+ </div>
+</div>
+
+<!-- ====== 页面3：欠款 ====== -->
+<div id="page-debt" class="page">
+ <div class="card debt-card">
+  <h3 style="border-left-color:#dc3545;">💰 商家欠款汇总</h3>
+  <div id="debtSummary"></div>
+  <div class="total-row" style="border-top:1px solid #ffe0e0;margin-top:4px">
+   <span>总欠款</span>
+   <span style="color:#dc3545" id="totalDebt">0 元</span>
+  </div>
+  <button class="btn btn-green mt-8" onclick="payAllDebt()">✅ 全部已付款</button>
+ </div>
+
+ <div class="card">
+  <h3 style="border-left-color:#dc3545;">❌ 未付款明细</h3>
+  <div id="unpayDetailList"></div>
+ </div>
+</div>
+
+<!-- ====== 页面4：全部 ====== -->
+<div id="page-history" class="page">
+ <div class="card">
+  <h3>📅 按日期筛选</h3>
+  <div class="row">
+   <select id="dateFilter" style="flex:3" onchange="renderHistory()"></select>
+   <button class="btn btn-sm" onclick="renderHistory()" style="flex:1">查询</button>
+  </div>
+  <div id="filterTotal" class="total-row">筛选合计：0 元</div>
+  <div id="historyList"></div>
+ </div>
+ <div class="card">
+  <div style="display:flex;gap:8px">
+   <button class="btn btn-danger btn-sm" onclick="exportData()" style="flex:1">📤 导出数据</button>
+   <button class="btn btn-danger btn-sm" onclick="clearData()" style="flex:1">🗑️ 清空</button>
+  </div>
+ </div>
+</div>
+
+<script>
+// ====== 数据 ======
+let shops = JSON.parse(localStorage.getItem('shops_v2')) || [];
+let records = JSON.parse(localStorage.getItem('records_v2')) || [];
+
+window.onload = function(){
+ renderShopSelect();
+ renderTodaySummary();
+ renderTodayList();
+ renderDebt();
+ renderHistory();
+}
+
+// ====== 切换页面 ======
+function switchTab(name){
+ document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+ document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+ document.getElementById('page-' + name).classList.add('active');
+ document.querySelector(`.tab[onclick*="'${name}'"]`).classList.add('active');
+ if(name === 'today'){ renderTodaySummary(); renderTodayList(); }
+ if(name === 'debt') renderDebt();
+ if(name === 'history') renderHistory();
+}
+
+// ====== 商家管理 ======
+function addShop(){
+ let name = document.getElementById('shopName').value.trim();
+ if(!name) return alert('请输入商家名称！');
+ if(shops.includes(name)) return alert('该商家已存在！');
+ shops.push(name);
+ localStorage.setItem('shops_v2', JSON.stringify(shops));
+ document.getElementById('shopName').value = '';
+ renderShopSelect();
+ alert('✅ 商家「' + name + '」已添加');
+}
+
+function renderShopSelect(){
+ let select = document.getElementById('shopSelect');
+ select.innerHTML = '<option value="">— 选择已有商家 —</option>';
+ shops.forEach(s => {
+  select.innerHTML += `<option value="${s}">${s}</option>`;
+ });
+}
+
+function updateQuickShop(){
+ // 选中商家时，自动填入快速录入
+ let shop = document.getElementById('shopSelect').value;
+ document.getElementById('food').focus();
+}
+
+// ====== 自动计算总价 ======
+function autoCalc(){
+ let weight = parseFloat(document.getElementById('weight').value) || 0;
+ let price = parseFloat(document.getElementById('price').value) || 0;
+ let money = weight * price;
+ document.getElementById('money').value = money > 0 ? money.toFixed(1) : '';
+}
+
+// ====== 添加记录 ======
+function addRecord(){
+ let shop = document.getElementById('shopSelect').value;
+ let food = document.getElementById('food').value.trim();
+ let weight = document.getElementById('weight').value.trim();
+ let price = document.getElementById('price').value.trim();
+ let money = document.getElementById('money').value.trim();
+ let status = document.getElementById('status').value;
+
+ if(!shop) return alert('请选择商家！');
+ if(!food) return alert('请输入菜品名称！');
+ if(!weight || parseFloat(weight) <= 0) return alert('请输入有效的斤数！');
+ if(!price || parseFloat(price) <= 0) return alert('请输入有效的进价！');
+
+ // 确保 money 是有效数字
+ let totalMoney = parseFloat(money) || (parseFloat(weight) * parseFloat(price));
+ totalMoney = Math.round(totalMoney * 100) / 100;
+
+ let date = new Date().toLocaleDateString('zh-CN');
+ let time = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+
+ records.unshift({ date, time, shop, food, weight, price, money: totalMoney, status });
+ localStorage.setItem('records_v2', JSON.stringify(records));
+
+ // 重置录入表单
+ // 清空菜品和数量，保留商家和状态
+ document.getElementById('food').value = '';
+ document.getElementById('weight').value = '';
+ document.getElementById('price').value = '';
+ document.getElementById('money').value = '';
+
+ // 如果商家列表有选择，保留不重置
+ renderTodaySummary();
+ renderTodayList();
+ renderDebt();
+ renderHistory();
+
+ alert('✅ 已记录：' + shop + ' — ' + food + ' ' + weight + '斤 ' + totalMoney + '元');
+}
+
+// ====== 今日概览 ======
+function renderTodaySummary(){
+ let today = new Date().toLocaleDateString('zh-CN');
+ let todayRecords = records.filter(r => r.date === today);
+ let count = todayRecords.length;
+ let total = todayRecords.reduce((sum, r) => sum + parseFloat(r.money), 0);
+ document.getElementById('todayCount').textContent = count;
+ document.getElementById('todayTotal').textContent = total.toFixed(1);
+}
+
+// ====== 今日清单 ======
+function renderTodayList(){
+ let today = new Date().toLocaleDateString('zh-CN');
+ let todayRecords = records.filter(r => r.date === today);
+ let html = '';
+ let total = 0;
+ todayRecords.forEach((r, i) => {
+  let idx = records.indexOf(r);
+  total += parseFloat(r.money);
+  let statusHtml = r.status === '未付'
+   ? `<span class="unpay" onclick="toggleStatus(${idx})">❌ 未付</span>`
+   : `<span class="pay" onclick="toggleStatus(${idx})">✅ 已付</span>`;
+  html += `<div class="item">
+   <span class="meta">${r.time}</span> | <strong>${r.food}</strong> ${r.weight}斤 × ${r.price}元/斤<br>
+   商家：${r.shop} | 总价 ${r.money}元 ${statusHtml}
+  </div>`;
+ });
+ document.getElementById('todayList').innerHTML = html || '<div class="empty">今天还没记账 📝</div>';
+ document.getElementById('todayTotal2').textContent = total.toFixed(1) + ' 元';
+}
+
+// ====== 欠款 ======
+function renderDebt(){
+ // 按商家汇总未付款
+ let unpayRecords = records.filter(r => r.status === '未付');
+ let debtByShop = {};
+ unpayRecords.forEach(r => {
+  if(!debtByShop[r.shop]) debtByShop[r.shop] = 0;
+  debtByShop[r.shop] += parseFloat(r.money);
+ });
+
+ let shopNames = Object.keys(debtByShop);
+ let totalDebt = Object.values(debtByShop).reduce((a,b) => a+b, 0);
+
+ // 欠款汇总卡片
+ let summaryHtml = shopNames.length === 0
+  ? '<div class="empty">🎉 没有欠款，全部已结清！</div>'
+  : shopNames.map(s => `<div class="debt-item">
+    <span class="name">${s}</span>
+    <span class="amount">${debtByShop[s].toFixed(1)} 元</span>
+   </div>`).join('');
+
+ document.getElementById('debtSummary').innerHTML = summaryHtml;
+ document.getElementById('totalDebt').textContent = totalDebt.toFixed(1) + ' 元';
+
+ // 未付款明细
+ let detailHtml = unpayRecords.length === 0
+  ? '<div class="empty">暂无未付款明细</div>'
+  : unpayRecords.map((r, i) => {
+   let idx = records.indexOf(r);
+   return `<div class="item">
+    日期 ${r.date} ${r.time || ''}<br>
+    ${r.shop} — ${r.food} ${r.weight}斤 × ${r.price}元 = <strong>${r.money}元</strong>
+    <span class="unpay" onclick="toggleStatus(${idx})"> ❌ 未付</span>
+   </div>`;
+  }).join('');
+ document.getElementById('unpayDetailList').innerHTML = detailHtml;
+}
+
+// ====== 一键全部已付 ======
+function payAllDebt(){
+ if(!confirm('确认将所有未付款标记为「已付」？')) return;
+ records.forEach(r => { if(r.status === '未付') r.status = '已付'; });
+ localStorage.setItem('records_v2', JSON.stringify(records));
+ renderTodayList();
+ renderDebt();
+ renderHistory();
+ alert('✅ 全部已标记为已付款！');
+}
+
+// ====== 切换单条付款状态 ======
+function toggleStatus(index){
+ records[index].status = records[index].status === '未付' ? '已付' : '未付';
+ localStorage.setItem('records_v2', JSON.stringify(records));
+ renderTodayList();
+ renderDebt();
+ renderHistory();
+ // 如果当前在欠款页面，刷新
+ let active = document.querySelector('.page.active');
+ if(active && active.id === 'page-debt') renderDebt();
+}
+
+// ====== 全部历史 ======
+function renderHistory(){
+ let selected = document.getElementById('dateFilter').value;
+ initDateFilter();
+
+ let filtered = selected === 'all'
+  ? records
+  : records.filter(r => r.date === selected);
+
+ let total = filtered.reduce((sum, r) => sum + parseFloat(r.money), 0);
+ document.getElementById('filterTotal').innerHTML = `筛选合计：${total.toFixed(1)} 元`;
+
+ let html = filtered.length === 0
+  ? '<div class="empty">暂无记录</div>'
+  : filtered.map((r, i) => {
+   let idx = records.indexOf(r);
+   let statusHtml = r.status === '未付'
+    ? `<span class="unpay" onclick="toggleStatus(${idx})">❌ 未付</span>`
+    : `<span class="pay" onclick="toggleStatus(${idx})">✅ 已付</span>`;
+   return `<div class="item">
+    <span class="meta">${r.date} ${r.time || ''}</span><br>
+    ${r.shop} — <strong>${r.food}</strong> ${r.weight}斤 × ${r.price}元/斤 = ${r.money}元 ${statusHtml}
+   </div>`;
+  }).join('');
+
+ document.getElementById('historyList').innerHTML = html;
+}
+
+function initDateFilter(){
+ let select = document.getElementById('dateFilter');
+ let dates = [...new Set(records.map(r => r.date))].sort((a,b) => new Date(b) - new Date(a));
+ let currentVal = select.value;
+ select.innerHTML = '<option value="all">全部日期</option>';
+ dates.forEach(d => {
+  select.innerHTML += `<option value="${d}">${d}</option>`;
+ });
+ // 保留之前的选择
+ if(currentVal && [...select.options].some(o => o.value === currentVal)){
+  select.value = currentVal;
+ }
+}
+
+// ====== 导出数据 ======
+function exportData(){
+ if(records.length === 0) return alert('暂无数据可导出');
+ let csv = '\uFEFF日期,时间,商家,菜品,斤数,进价(元/斤),总金额(元),状态\n';
+ records.forEach(r => {
+  csv += `${r.date},${r.time||''},${r.shop},${r.food},${r.weight},${r.price},${r.money},${r.status}\n`;
+ });
+ let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+ let link = document.createElement('a');
+ link.href = URL.createObjectURL(blob);
+ link.download = `生鲜台账_${new Date().toLocaleDateString('zh-CN')}.csv`;
+ link.click();
+}
+
+// ====== 清空数据 ======
+function clearData(){
+ if(!confirm('⚠️ 确定清空所有数据？此操作不可恢复！')) return;
+ if(!confirm('再次确认：所有进货记录将被永久删除！')) return;
+ localStorage.removeItem('shops_v2');
+ localStorage.removeItem('records_v2');
+ shops = [];
+ records = [];
+ renderShopSelect();
+ renderTodaySummary();
+ renderTodayList();
+ renderDebt();
+ renderHistory();
+ alert('已清空所有数据');
+}
+</script>
+</body>
+</html>
