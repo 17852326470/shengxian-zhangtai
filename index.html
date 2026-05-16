@@ -3,7 +3,7 @@
 <head>
  <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
- <title>生鲜每日进货台账</title>
+ <title>呱呱超市 · 每日进货台账</title>
  <style>
  * { box-sizing: border-box; margin: 0; padding: 0; }
  body {
@@ -60,11 +60,12 @@
  .admin-link { text-align: center; margin: 8px 0; font-size: 11px; color: #ccc; }
  .admin-link a { color: #ccc; text-decoration: none; }
  .admin-link a:hover { color: #999; }
+ .footer { text-align: center; font-size: 11px; color: #ddd; margin-top: 4px; }
  </style>
 </head>
 <body>
 
-<div class="title">🥬 生鲜每日进货台账</div>
+<div class="title">🐸 呱呱超市 · 每日进货台账</div>
 
 <div class="tab-bar">
  <div class="tab active" onclick="switchTab('record')">📝 记账</div>
@@ -158,6 +159,7 @@
  <a href="#" onclick="showHelp()">💡 使用帮助</a> · 
  <a href="http://127.0.0.1:3100/" target="_blank">⚙️ 管理后台</a>
 </div>
+<div class="footer">🐸 呱呱超市 · 内部使用</div>
 
 <script>
 // ====== 数据 ======
@@ -353,7 +355,7 @@ function exportData(){
  let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
  let link = document.createElement('a');
  link.href = URL.createObjectURL(blob);
- link.download = `生鲜台账_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.csv`;
+ link.download = `呱呱超市台账_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.csv`;
  link.click();
 }
 
@@ -371,7 +373,7 @@ function clearData(){
 // ====== 使用帮助 ======
 function showHelp(){
  alert(
-  '📖 使用说明\n\n' +
+  '📖 呱呱超市使用说明\n\n' +
   '1️⃣ 先添加商家（如：王师傅、李大姐）\n' +
   '2️⃣ 选择商家，填写菜品、斤数、进价\n' +
   '3️⃣ 总金额自动计算，选择是否已付款\n' +
