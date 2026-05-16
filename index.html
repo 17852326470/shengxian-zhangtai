@@ -72,6 +72,7 @@
  <div class="tab" onclick="switchTab('today')">📋 今日</div>
  <div class="tab" onclick="switchTab('debt')">💰 欠款</div>
  <div class="tab" onclick="switchTab('history')">📜 全部</div>
+ <div class="tab" onclick="switchTab('monthly')">📊 月度</div>
 </div>
 
 <!-- 页面1：记账 -->
@@ -155,6 +156,38 @@
  </div>
 </div>
 
+<!-- 页面5：月度统计 -->
+<div id="page-monthly" class="page">
+ <div class="card">
+  <h3>📊 月度统计</h3>
+  <div class="row">
+   <select id="monthSelect" style="flex:3" onchange="renderMonthly()"></select>
+   <button class="btn btn-sm" onclick="renderMonthly()" style="flex:1">查询</button>
+  </div>
+ </div>
+ <div class="card">
+  <div class="total-row" style="justify-content:space-around">
+   <span>总进货：<span id="monthTotalWeight">0</span> 斤</span>
+   <span>总金额：<span id="monthTotalMoney">0</span> 元</span>
+   <span>平均进价：<span id="monthAvgPrice">0</span> 元/斤</span>
+  </div>
+ </div>
+ <div class="card">
+  <h3>🥬 各菜品明细</h3>
+  <table style="width:100%;font-size:13px">
+   <thead><tr><th>菜品</th><th>斤数</th><th>总金额</th><th>均价</th><th>笔数</th></tr></thead>
+   <tbody id="monthlyDetail"></tbody>
+  </table>
+ </div>
+ <div class="card">
+  <h3>🏪 各商家明细</h3>
+  <table style="width:100%;font-size:13px">
+   <thead><tr><th>商家</th><th>斤数</th><th>总金额</th><th>均价</th></tr></thead>
+   <tbody id="monthlyShopDetail"></tbody>
+  </table>
+ </div>
+</div>
+
 <div class="admin-link">
  <a href="#" onclick="showHelp()">💡 使用帮助</a> · 
  <a href="http://127.0.0.1:3100/" target="_blank">⚙️ 管理后台</a>
@@ -177,6 +210,7 @@ function renderAll() {
  renderTodayList();
  renderDebt();
  renderHistory();
+ renderMonthly();
 }
 
 // ====== 切换页面 ======
@@ -188,6 +222,7 @@ function switchTab(name) {
  if (name === 'today') { renderTodaySummary(); renderTodayList(); }
  if (name === 'debt') renderDebt();
  if (name === 'history') renderHistory();
+ if (name === 'monthly') renderMonthly();
 }
 
 // ====== 商家 ======
@@ -361,6 +396,91 @@ function initDateFilter(){
  select.innerHTML = '<option value="all">全部日期</option>';
  dates.forEach(d => { select.innerHTML += `<option value="${d}">${d}</option>`; });
  if(currentVal && [...select.options].some(o => o.value === currentVal)) select.value = currentVal;
+}
+
+// ====== 月度统计 ======
+function getMonthLabel(d){
+ let parts = d.split('/');
+ return parts[0] + '年' + parts[1] + '月';
+}
+
+function getMonthKey(d){
+ let parts = d.split('/');
+ return parts[0] + '/' + parts[1];
+}
+
+function initMonthSelect(){
+ let select = document.getElementById('monthSelect');
+ let months = [...new Set(records.map(r => getMonthKey(r.date)))].sort().reverse();
+ let currentVal = select.value;
+ select.innerHTML = '';
+ let now = new Date();
+ let thisMonth = now.getFullYear() + '/' + String(now.getMonth()+1).padStart(2,'0');
+ months.forEach(m => {
+  let opt = document.createElement('option');
+  opt.value = m;
+  let parts = m.split('/');
+  opt.textContent = parts[0] + '年' + parts[1] + '月';
+  select.appendChild(opt);
+ });
+ // 如果当前没有月份数据，默认选中本月
+ if(months.length === 0){
+  let opt = document.createElement('option');
+  opt.value = thisMonth;
+  opt.textContent = getMonthLabel(thisMonth);
+  select.appendChild(opt);
+ }
+ if(currentVal && [...select.options].some(o => o.value === currentVal)) select.value = currentVal;
+}
+
+function renderMonthly(){
+ initMonthSelect();
+ let selected = document.getElementById('monthSelect').value;
+ if(!selected) return;
+ 
+ let monthRecords = records.filter(r => getMonthKey(r.date) === selected);
+ 
+ // 汇总
+ let totalWeight = monthRecords.reduce((s, r) => s + parseFloat(r.weight), 0);
+ let totalMoney = monthRecords.reduce((s, r) => s + r.money, 0);
+ let avgPrice = totalWeight > 0 ? (totalMoney / totalWeight) : 0;
+ 
+ document.getElementById('monthTotalWeight').textContent = totalWeight.toFixed(1);
+ document.getElementById('monthTotalMoney').textContent = totalMoney.toFixed(1);
+ document.getElementById('monthAvgPrice').textContent = avgPrice.toFixed(2);
+ 
+ // 按菜品汇总
+ let byFood = {};
+ monthRecords.forEach(r => {
+  if(!byFood[r.food]) byFood[r.food] = { weight: 0, money: 0, count: 0 };
+  byFood[r.food].weight += parseFloat(r.weight);
+  byFood[r.food].money += r.money;
+  byFood[r.food].count++;
+ });
+ let foodKeys = Object.keys(byFood).sort((a,b) => byFood[b].money - byFood[a].money);
+ document.getElementById('monthlyDetail').innerHTML = foodKeys.length === 0
+  ? '<tr><td colspan="5" class="empty">暂无数据</td></tr>'
+  : foodKeys.map(f => {
+   let d = byFood[f];
+   let avg = d.weight > 0 ? (d.money / d.weight) : 0;
+   return `<tr><td>${f}</td><td>${d.weight.toFixed(1)}</td><td>${d.money.toFixed(1)}</td><td>${avg.toFixed(2)}</td><td>${d.count}</td></tr>`;
+  }).join('');
+ 
+ // 按商家汇总
+ let byShop = {};
+ monthRecords.forEach(r => {
+  if(!byShop[r.shop]) byShop[r.shop] = { weight: 0, money: 0 };
+  byShop[r.shop].weight += parseFloat(r.weight);
+  byShop[r.shop].money += r.money;
+ });
+ let shopKeys = Object.keys(byShop).sort((a,b) => byShop[b].money - byShop[a].money);
+ document.getElementById('monthlyShopDetail').innerHTML = shopKeys.length === 0
+  ? '<tr><td colspan="4" class="empty">暂无数据</td></tr>'
+  : shopKeys.map(s => {
+   let d = byShop[s];
+   let avg = d.weight > 0 ? (d.money / d.weight) : 0;
+   return `<tr><td>${s}</td><td>${d.weight.toFixed(1)}</td><td>${d.money.toFixed(1)}</td><td>${avg.toFixed(2)}</td></tr>`;
+  }).join('');
 }
 
 // ====== 导出 ======
