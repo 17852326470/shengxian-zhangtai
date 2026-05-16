@@ -186,6 +186,9 @@
    <tbody id="monthlyShopDetail"></tbody>
   </table>
  </div>
+ <div class="card">
+  <button class="btn btn-danger btn-sm" onclick="exportMonthly()">📤 导出月度报表 (CSV)</button>
+ </div>
 </div>
 
 <div class="admin-link">
@@ -496,6 +499,65 @@ function exportData(){
 }
 
 // ====== 清空 ======
+function exportMonthly(){
+ let selected = document.getElementById('monthSelect').value;
+ if(!selected) return alert('请先选择月份');
+ let monthLabel = getMonthLabel(selected);
+ let monthRecords = records.filter(r => getMonthKey(r.date) === selected);
+ if(monthRecords.length === 0) return alert('该月暂无数据');
+
+ // 按菜品汇总
+ let byFood = {};
+ monthRecords.forEach(r => {
+  if(!byFood[r.food]) byFood[r.food] = { weight: 0, money: 0, count: 0 };
+  byFood[r.food].weight += parseFloat(r.weight);
+  byFood[r.food].money += r.money;
+  byFood[r.food].count++;
+ });
+
+ // 按商家汇总
+ let byShop = {};
+ monthRecords.forEach(r => {
+  if(!byShop[r.shop]) byShop[r.shop] = { weight: 0, money: 0 };
+  byShop[r.shop].weight += parseFloat(r.weight);
+  byShop[r.shop].money += r.money;
+ });
+
+ let csv = '\uFEFF';
+ csv += '===== 呱呱超市月度报表: ' + monthLabel + ' =====\n\n';
+ csv += '【汇总】\n';
+ csv += '总斤数,总金额(元),平均进价(元/斤)\n';
+ let tw = monthRecords.reduce((s, r) => s + parseFloat(r.weight), 0);
+ let tm = monthRecords.reduce((s, r) => s + r.money, 0);
+ csv += tw.toFixed(1) + ',' + tm.toFixed(1) + ',' + (tw > 0 ? (tm/tw).toFixed(2) : '0') + '\n\n';
+
+ csv += '【按菜品】\n';
+ csv += '菜品,斤数,总金额(元),均价(元/斤),笔数\n';
+ Object.keys(byFood).sort((a,b) => byFood[b].money - byFood[a].money).forEach(f => {
+  let d = byFood[f];
+  csv += f + ',' + d.weight.toFixed(1) + ',' + d.money.toFixed(1) + ',' + (d.weight > 0 ? (d.money/d.weight).toFixed(2) : '0') + ',' + d.count + '\n';
+ });
+
+ csv += '\n【按商家】\n';
+ csv += '商家,斤数,总金额(元),均价(元/斤)\n';
+ Object.keys(byShop).sort((a,b) => byShop[b].money - byShop[a].money).forEach(s => {
+  let d = byShop[s];
+  csv += s + ',' + d.weight.toFixed(1) + ',' + d.money.toFixed(1) + ',' + (d.weight > 0 ? (d.money/d.weight).toFixed(2) : '0') + '\n';
+ });
+
+ csv += '\n【明细】\n';
+ csv += '日期,时间,商家,菜品,斤数,进价(元/斤),总金额(元),状态\n';
+ monthRecords.forEach(r => {
+  csv += r.date + ',' + (r.time||'') + ',' + r.shop + ',' + r.food + ',' + r.weight + ',' + r.price + ',' + r.money + ',' + r.status + '\n';
+ });
+
+ let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+ let link = document.createElement('a');
+ link.href = URL.createObjectURL(blob);
+ link.download = `呱呱超市月度报表_${selected.replace('/','-')}.csv`;
+ link.click();
+}
+
 function clearData(){
  if(!confirm('⚠️ 确定清空所有数据？此操作不可恢复！')) return;
  if(!confirm('再次确认：所有进货记录将被永久删除！')) return;
