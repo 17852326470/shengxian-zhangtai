@@ -71,7 +71,7 @@
  <div class="tab active" onclick="switchTab('record')">📝 记账</div>
  <div class="tab" onclick="switchTab('today')">📋 今日</div>
  <div class="tab" onclick="switchTab('debt')">💰 欠款</div>
- <div class="tab" onclick="switchTab('history')">📜 全部</div>
+ 
  <div class="tab" onclick="switchTab('monthly')">📊 月度</div>
 </div>
 
@@ -137,24 +137,7 @@
  </div>
 </div>
 
-<!-- 页面4：全部 -->
-<div id="page-history" class="page">
- <div class="card">
-  <h3>📅 按日期筛选</h3>
-  <div class="row">
-   <select id="dateFilter" style="flex:3" onchange="renderHistory()"></select>
-   <button class="btn btn-sm" onclick="renderHistory()" style="flex:1">查询</button>
-  </div>
-  <div id="filterTotal" class="total-row">筛选合计：0 元</div>
-  <div id="historyList"></div>
- </div>
- <div class="card">
-  <div style="display:flex;gap:8px">
-   <button class="btn btn-danger btn-sm" onclick="exportData()" style="flex:1">📤 导出 CSV</button>
-   <button class="btn btn-danger btn-sm" onclick="clearData()" style="flex:1">🗑️ 清空数据</button>
-  </div>
- </div>
-</div>
+
 
 <!-- 页面5：月度统计 -->
 <div id="page-monthly" class="page">
@@ -192,8 +175,7 @@
 </div>
 
 <div class="admin-link">
- <a href="#" onclick="showHelp()">💡 使用帮助</a> · 
- <a href="http://127.0.0.1:3100/" target="_blank">⚙️ 管理后台</a>
+ <a href="#" onclick="showHelp()">💡 使用帮助</a>
 </div>
 <div class="footer">🐸 呱呱超市 · 内部使用</div>
 
@@ -212,7 +194,6 @@ function renderAll() {
  renderTodaySummary();
  renderTodayList();
  renderDebt();
- renderHistory();
  renderMonthly();
 }
 
@@ -224,7 +205,6 @@ function switchTab(name) {
  document.querySelector(`.tab[onclick*="'${name}'"]`).classList.add('active');
  if (name === 'today') { renderTodaySummary(); renderTodayList(); }
  if (name === 'debt') renderDebt();
- if (name === 'history') renderHistory();
  if (name === 'monthly') renderMonthly();
 }
 
@@ -364,39 +344,7 @@ function payAllDebt(){
  alert('✅ 全部已标记为已付款！');
 }
 
-// ====== 历史 ======
-function renderHistory(){
- let selected = document.getElementById('dateFilter').value;
- initDateFilter();
 
- let filtered = selected === 'all'
-  ? records
-  : records.filter(r => r.date === selected);
-
- document.getElementById('filterTotal').innerHTML = `筛选合计：${filtered.reduce((s, r) => s + r.money, 0).toFixed(1)} 元`;
-
- document.getElementById('historyList').innerHTML = filtered.length === 0
-  ? '<div class="empty">暂无记录</div>'
-  : filtered.map(r => {
-   let idx = records.indexOf(r);
-   let statusHtml = r.status === '未付'
-    ? `<span class="unpay" onclick="toggleStatus(${idx})">❌ 未付</span>`
-    : `<span class="pay" onclick="toggleStatus(${idx})">✅ 已付</span>`;
-   return `<div class="item">
-    <span class="meta">${r.date} ${r.time || ''}</span><br>
-    ${r.shop} — <strong>${r.food}</strong> ${r.weight}斤 × ${r.price}元/斤 = ${r.money}元 ${statusHtml}
-   </div>`;
-  }).join('');
-}
-
-function initDateFilter(){
- let select = document.getElementById('dateFilter');
- let dates = [...new Set(records.map(r => r.date))].sort((a,b) => new Date(b) - new Date(a));
- let currentVal = select.value;
- select.innerHTML = '<option value="all">全部日期</option>';
- dates.forEach(d => { select.innerHTML += `<option value="${d}">${d}</option>`; });
- if(currentVal && [...select.options].some(o => o.value === currentVal)) select.value = currentVal;
-}
 
 // ====== 月度统计 ======
 function getMonthLabel(d){
@@ -483,17 +431,7 @@ function renderMonthly(){
   }).join('');
 }
 
-// ====== 导出 ======
-function exportData(){
- if(records.length === 0) return alert('暂无数据可导出');
- let csv = '\uFEFF日期,时间,商家,菜品,斤数,进价(元/斤),总金额(元),状态\n';
- records.forEach(r => { csv += `${r.date},${r.time||''},${r.shop},${r.food},${r.weight},${r.price},${r.money},${r.status}\n`; });
- let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
- let link = document.createElement('a');
- link.href = URL.createObjectURL(blob);
- link.download = `呱呱超市台账_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.csv`;
- link.click();
-}
+
 
 // ====== 清空 ======
 function exportMonthly(){
@@ -555,15 +493,7 @@ function exportMonthly(){
  link.click();
 }
 
-function clearData(){
- if(!confirm('⚠️ 确定清空所有数据？此操作不可恢复！')) return;
- if(!confirm('再次确认：所有进货记录将被永久删除！')) return;
- localStorage.removeItem('shops_v2');
- localStorage.removeItem('records_v2');
- shops = []; records = [];
- renderAll();
- alert('已清空所有数据');
-}
+
 
 // ====== 使用帮助 ======
 function showHelp(){
