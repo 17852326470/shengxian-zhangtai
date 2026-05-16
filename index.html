@@ -232,16 +232,13 @@ function switchTab(name) {
 // 预设商家
 const DEFAULT_SHOPS = ['毛式菜业','浩源','国良','菜小利','生国','甘蓝','言成','河北蜜薯','莲藕','鑫隆','豆芽','仁怀峰','吴彬','新润','蘑菇'];
 
-// 初始化商家列表（首次使用时自动添加预设）
+// 初始化商家列表（合并预设商家 + 已有商家）
 function initShops(){
- let saved = JSON.parse(localStorage.getItem('shops_v2'));
- if(!saved || saved.length === 0){
-  // 首次使用，自动填入预设商家
-  localStorage.setItem('shops_v2', JSON.stringify(DEFAULT_SHOPS));
-  shops = [...DEFAULT_SHOPS];
- } else {
-  shops = saved;
- }
+ let saved = JSON.parse(localStorage.getItem('shops_v2')) || [];
+ // 合并预设商家和已有商家，去重
+ let merged = [...new Set([...DEFAULT_SHOPS, ...saved])];
+ localStorage.setItem('shops_v2', JSON.stringify(merged));
+ shops = merged;
 }
 
 function addShop(){
